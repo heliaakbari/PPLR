@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     # path
     working_dir = osp.dirname(osp.abspath(__file__))
-    parser.add_argument('--data-dir', type=str, metavar='PATH', default=osp.join(working_dir, 'examples/data'))
+    parser.add_argument('--data-dir', type=str, metavar='PATH', default=osp.join(working_dir, 'data'))
 
     # testing configs
     parser.add_argument('--resume', type=str, required=True, metavar='PATH')

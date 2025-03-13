@@ -158,7 +158,7 @@ def main_worker(args):
     model = nn.DataParallel(model)
 
     # load a checkpoint
-    checkpoint = load_checkpoint("model_best.pth")
+    checkpoint = load_checkpoint('/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth')
     copy_state_dict(checkpoint, model)
 
     # evaluator
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Part-based Pseudo Label Refinement")
     # data
     parser.add_argument('-d', '--dataset', type=str, default='market1501')
-    parser.add_argument('-b', '--batch-size', type=int, default=64)
+    parser.add_argument('-b', '--batch-size', type=int, default=16)
     parser.add_argument('-j', '--workers', type=int, default=4)
     parser.add_argument('-n', '--num-instances', type=int, default=4,
                         help="each minibatch consist of "
@@ -271,7 +271,7 @@ if __name__ == '__main__':
 
     # path
     working_dir = osp.dirname(osp.abspath(__file__))
-    parser.add_argument('--data-dir', type=str, metavar='PATH', default=osp.join(working_dir, 'examples/data'))
+    parser.add_argument('--data-dir', type=str, metavar='PATH', default=osp.join(working_dir, 'data'))
     parser.add_argument('--logs-dir', type=str, metavar='PATH',
                         default=osp.join(working_dir, 'logs/test'))
 
@@ -290,10 +290,10 @@ if __name__ == '__main__':
                         help="starting epoch for agreement-aware label smoothing")
 
     # optimizer
-    parser.add_argument('--lr', type=float, default=0.00035, help="learning rate")
+    parser.add_argument('--lr', type=float, default=0.000175, help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--epochs', type=int, default=500)
-    parser.add_argument('--iters', type=int, default=400)
+    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--iters', type=int, default=1000)
     parser.add_argument('--step-size', type=int, default=20)
 
     # cluster
