@@ -1,0 +1,19 @@
+name: pplr
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.8  # Adjust to match your project’s Python version
+  - numpy
+  - pytorch
+  - torchvision
+  - six
+  - h5py
+  - pillow
+  - scipy
+  - scikit-learn
+  - metric-learn
+  - pip
+  - pip:
+      - git+https://github.com/yoonkicho/PPLR  # Optional: Install the repo via pip if needed
