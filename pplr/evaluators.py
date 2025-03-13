@@ -108,7 +108,7 @@ def pairwise_distance(features, query=None, gallery=None):
     y = y.view(n, -1)
     dist_m = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
            torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
-    dist_m.addmm_(1, -2, x, y.t())
+    dist_m.addmm_(beta=1, alpha=-2, mat1=x, mat2=y.t())
     return dist_m, x.numpy(), y.numpy()
 
 
