@@ -40,6 +40,7 @@ def load_checkpoint(fpath):
 
 def copy_state_dict(state_dict, model, strip=None):
     tgt_state = model.state_dict()
+    print(f"tgt state is:{tgt_state.keys()}")
     copied_names = set()
     for name, param in state_dict.items():
         if strip is not None and name.startswith(strip):
