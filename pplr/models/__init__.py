@@ -2,12 +2,14 @@ from __future__ import absolute_import
 
 from .resnet import *
 from .resnet_part import *
-
+from .vit import *
+from .my_resnet import my_resnet50
 
 __factory = {
     'resnet18': resnet18,
     'resnet34': resnet34,
     'resnet50': resnet50,
+    'my_resnet50': my_resnet50,
     'resnet101': resnet101,
     'resnet152': resnet152,
     'resnet18part': resnet18part,
@@ -15,6 +17,9 @@ __factory = {
     'resnet50part': resnet50part,
     'resnet101part': resnet101part,
     'resnet152part': resnet152part,
+    'vit_base_patch16_224_TransReID': vit_base_patch16_224_TransReID,
+    'vit_small_patch16_224_TransReID': vit_small_patch16_224_TransReID,
+    'vit': my_vit,
 
 }
 
