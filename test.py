@@ -76,7 +76,7 @@ def main_worker(args):
     #model = lc(model, args.resume)
 
     # load a checkpoint
-    checkpoint = load_checkpoint('/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth')
+    checkpoint = load_checkpoint(args.resume)
     copy_state_dict(checkpoint, model)
 
     # evaluate
