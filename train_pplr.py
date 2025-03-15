@@ -24,7 +24,7 @@ from pplr.utils.data.sampler import RandomMultipleGallerySampler
 from pplr.utils.data.preprocessor import Preprocessor
 from pplr.utils.logging import Logger
 from pplr.utils.faiss_rerank import compute_ranked_list, compute_jaccard_distance
-
+from pplr.utils.myserialization_pplr import load_checkpoint, copy_state_dict
 best_mAP = 0
 
 
@@ -156,6 +156,10 @@ def main_worker(args):
     model.cuda()
     model = nn.DataParallel(model)
 
+    # load a checkpoint
+    checkpoint = load_checkpoint("/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth")
+    copy_state_dict(checkpoint, model)
+
     # evaluator
     evaluator = Evaluator(model)
 
@@ -261,7 +265,7 @@ if __name__ == '__main__':
                              "(batch_size // num_instances) identities, and "
                              "each identity has num_instances instances, "
                              "default: 0 (NOT USE)")
-    parser.add_argument('--height', type=int, default=384, help="input height")
+    parser.add_argument('--height', type=int, default=256, help="input height")
     parser.add_argument('--width', type=int, default=128, help="input width")
 
     # path
@@ -273,7 +277,7 @@ if __name__ == '__main__':
     # training configs
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--print-freq', type=int, default=10)
-    parser.add_argument('--eval-step', type=int, default=5)
+    parser.add_argument('--eval-step', type=int, default=1)
 
     # PPLR
     parser.add_argument('--part', type=int, default=3, help="number of part")
@@ -287,7 +291,7 @@ if __name__ == '__main__':
     # optimizer
     parser.add_argument('--lr', type=float, default=0.000175, help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--epochs', type=int, default=60)
+    parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--iters', type=int, default=1000)
     parser.add_argument('--step-size', type=int, default=20)
 

@@ -1,0 +1,35 @@
+==========
+Args:Namespace(aals_epoch=5, batch_size=16, beta=0.5, data_dir='/home/zakerian/PPLR/PPLRFORK/PPLR/data', dataset='market1501', epochs=50, eps=0.5, eval_step=1, height=384, iters=1000, k=20, k1=30, k2=6, logs_dir='fixmatch_pplr_751_class', lr=0.000175, num_instances=4, part=3, print_freq=10, seed=1, step_size=20, weight_decay=0.0005, width=128, workers=4)
+==========
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+=> Loaded checkpoint '/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth'
+loading from myserialization
+Extract Features: [50/809]	Time 0.032 (0.069)	Data 0.000 (0.004)	
+Extract Features: [100/809]	Time 0.037 (0.053)	Data 0.000 (0.002)	
+Extract Features: [150/809]	Time 0.047 (0.047)	Data 0.000 (0.001)	
+Extract Features: [200/809]	Time 0.041 (0.044)	Data 0.000 (0.001)	
+Extract Features: [250/809]	Time 0.032 (0.043)	Data 0.000 (0.001)	
+Extract Features: [300/809]	Time 0.037 (0.042)	Data 0.000 (0.001)	
+Extract Features: [350/809]	Time 0.037 (0.041)	Data 0.000 (0.001)	
+Extract Features: [400/809]	Time 0.032 (0.040)	Data 0.000 (0.001)	
+Extract Features: [450/809]	Time 0.037 (0.040)	Data 0.000 (0.001)	
+Extract Features: [500/809]	Time 0.032 (0.040)	Data 0.000 (0.001)	
+Extract Features: [550/809]	Time 0.042 (0.039)	Data 0.000 (0.001)	
+Extract Features: [600/809]	Time 0.032 (0.039)	Data 0.000 (0.001)	
+Extract Features: [650/809]	Time 0.032 (0.039)	Data 0.000 (0.001)	
+Extract Features: [700/809]	Time 0.032 (0.038)	Data 0.000 (0.000)	
+Extract Features: [750/809]	Time 0.037 (0.038)	Data 0.000 (0.000)	
+Extract Features: [800/809]	Time 0.037 (0.038)	Data 0.000 (0.000)	
+Computing jaccard distance...
+Jaccard distance computing time cost: 15.323941230773926
+Compute cross agreement score...
+Cross agreement score time cost: 2.12416672706604
+==> Statistics for epoch 0: 838 clusters, 5498 un-clustered instances

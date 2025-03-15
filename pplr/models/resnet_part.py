@@ -21,7 +21,7 @@ class ResNetPart(nn.Module):
         152: torchvision.models.resnet152,
     }
 
-    def __init__(self, depth, pretrained=True, num_parts=3, num_classes=0):
+    def __init__(self, depth, pretrained=None, num_parts=3, num_classes=0):
         super(ResNetPart, self).__init__()
         self.pretrained = pretrained
         self.depth = depth

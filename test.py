@@ -16,7 +16,7 @@ from pplr.evaluators import Evaluator
 from pplr.utils.data import transforms as T
 from pplr.utils.data.preprocessor import Preprocessor
 from pplr.utils.logging import Logger
-from pplr.utils.serialization import load_checkpoint, copy_state_dict
+from pplr.utils.myserialization_pplr import load_checkpoint, copy_state_dict
 
 
 def get_data(name, data_dir, height, width, batch_size, workers):
@@ -63,7 +63,7 @@ def main_worker(args):
     dataset, test_loader = get_data(args.dataset, args.data_dir, args.height, args.width, args.batch_size, args.workers)
 
     # model
-    model = resnet50part(num_parts=args.part, num_classes=3000)
+    model = resnet50part(num_parts=args.part, num_classes=751)
     model.cuda()
     model = nn.DataParallel(model)
 

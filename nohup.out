@@ -1,0 +1,31 @@
+==========
+Args:Namespace(aals_epoch=5, batch_size=16, beta=0.5, data_dir='/home/zakerian/PPLR/PPLRFORK/PPLR/data', dataset='market1501', epochs=50, eps=0.5, eval_step=1, height=384, iters=1000, k=20, k1=30, k2=6, logs_dir='fixmatch_pplr_751_class', lr=0.000175, num_instances=4, part=3, print_freq=10, seed=1, step_size=20, weight_decay=0.0005, width=128, workers=4)
+==========
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+=> Loaded checkpoint '/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth'
+loading from myserialization
+/home/zakerian/miniconda3/envs/pplr/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/zakerian/miniconda3/envs/pplr/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=None`.
+  warnings.warn(msg)
+Extract Features: [50/809]	Time 0.042 (0.075)	Data 0.000 (0.004)	
+Extract Features: [100/809]	Time 0.032 (0.056)	Data 0.000 (0.002)	
+Extract Features: [150/809]	Time 0.037 (0.049)	Data 0.000 (0.001)	
+Traceback (most recent call last):
+  File "train_pplr.py", line 306, in <module>
+    main()
+  File "train_pplr.py", line 136, in main
+    main_worker(args)
+  File "train_pplr.py", line 177, in main_worker
+    features_g, features_p, _ = extract_all_features(model, cluster_loader)
+  File "/home/zakerian/PPLR/PPLRFORK/PPLR/pplr/evaluators.py", line 74, in extract_all_features
+    outputs_g, outputs_p = outputs_g.data.cpu(), outputs_p.data.cpu()
+KeyboardInterrupt
