@@ -94,7 +94,7 @@ if __name__ == '__main__':
     # testing configs
     parser.add_argument('--resume', type=str, required=True, metavar='PATH')
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
-    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--seed', type=int, default=0)
 
     # model configs
     parser.add_argument('--part', type=int, default=3, help="number of part")

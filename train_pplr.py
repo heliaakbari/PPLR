@@ -157,7 +157,7 @@ def main_worker(args):
     model = nn.DataParallel(model)
 
     # load a checkpoint
-    checkpoint = load_checkpoint("/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth")
+    checkpoint = load_checkpoint(args.resume)
     copy_state_dict(checkpoint, model)
 
     # evaluator
@@ -265,7 +265,7 @@ if __name__ == '__main__':
                              "(batch_size // num_instances) identities, and "
                              "each identity has num_instances instances, "
                              "default: 0 (NOT USE)")
-    parser.add_argument('--height', type=int, default=256, help="input height")
+    parser.add_argument('--height', type=int, default=384, help="input height")
     parser.add_argument('--width', type=int, default=128, help="input width")
 
     # path
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument('--data-dir', type=str, metavar='PATH', default=osp.join(working_dir, 'data'))
     parser.add_argument('--logs-dir', type=str, metavar='PATH',
                         default=osp.join(working_dir, 'logs/test'))
-
+    parser.add_argument('--resume', type=str, required=True, metavar='PATH')
     # training configs
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--print-freq', type=int, default=10)
