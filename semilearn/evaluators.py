@@ -9,15 +9,15 @@ import random
 import copy
 
 from .evaluation_metrics import cmc, mean_ap
-from .utils.meters import AverageMeter
-from .utils.rerank import re_ranking
-from .utils import to_torch
+from .pp_utils.meters import AverageMeter
+from .pp_utils.rerank import re_ranking
+from .pp_utils import to_torch
 
 
 def extract_cnn_feature(model, inputs):
     inputs = to_torch(inputs).cuda()
     outputs = model(inputs)
-    outputs = outputs.data.cpu()
+    outputs = outputs['feat'].cpu()
     return outputs
 
 
@@ -53,7 +53,7 @@ def extract_features(model, data_loader, print_freq=50):
     return features, labels
 
 
-def extract_all_features(model, data_loader, print_freq=200):
+def extract_all_features(model, data_loader, print_freq=50):
     model.eval()
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -69,6 +69,7 @@ def extract_all_features(model, data_loader, print_freq=200):
             inputs = to_torch(imgs).cuda()
             if isinstance(model, nn.DataParallel):
                 outputs_g, outputs_p = model.module.extract_all_features(inputs)
+
             else:
                 outputs_g, outputs_p = model.extract_all_features(inputs)
             outputs_g, outputs_p = outputs_g.data.cpu(), outputs_p.data.cpu()
@@ -108,9 +109,8 @@ def pairwise_distance(features, query=None, gallery=None):
     y = y.view(n, -1)
     dist_m = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
            torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
-    dist_m.addmm_(1, -2, x, y.t())
+    dist_m.addmm_(beta=1, alpha=-2, mat1=x, mat2=y.t())
     return dist_m, x.numpy(), y.numpy()
-
 
 def evaluate_all(query_features, gallery_features, distmat, query=None, gallery=None,
                  query_ids=None, gallery_ids=None,

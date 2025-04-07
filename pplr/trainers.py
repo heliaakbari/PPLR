@@ -21,6 +21,8 @@ class PPLRTrainer(object):
         self.criterion_ce = CrossEntropyLabelSmooth(num_classes=num_class).cuda()
         self.criterion_tri = SoftTripletLoss().cuda()
 
+        
+
     def train(self, epoch, train_dataloader, optimizer, print_freq=1, train_iters=200):
         self.model.train()
 

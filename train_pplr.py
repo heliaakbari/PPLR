@@ -180,9 +180,10 @@ def main_worker(args):
 
         if epoch == 0:
             cluster = DBSCAN(eps=args.eps, min_samples=4, metric='precomputed', n_jobs=8)
-
+        print(cluster)
         # assign pseudo-labels
         pseudo_labels, num_class = compute_pseudo_labels(features_g, cluster, args.k1)
+
 
         # Compute the cross-agreement
         score = compute_cross_agreement(features_g, features_p, k=args.k)
