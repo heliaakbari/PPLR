@@ -13,11 +13,11 @@ import torch.nn.functional as F
 from torch import nn
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
-
+from semilearn.core.evaluate_label import Algorithm
 from pplr import datasets
 from pplr.models import resnet50part
 from pplr.trainers import PPLRTrainer
-from pplr.evaluators import Evaluator, extract_all_features
+from pplr.evaluators import Evaluator, extract_all_features, return_batch_images
 from pplr.utils.data import IterLoader
 from pplr.utils.data import transforms as T
 from pplr.utils.data.sampler import RandomMultipleGallerySampler
@@ -26,7 +26,7 @@ from pplr.utils.logging import Logger
 from pplr.utils.faiss_rerank import compute_ranked_list, compute_jaccard_distance
 from pplr.utils.myserialization_pplr import load_checkpoint, copy_state_dict
 best_mAP = 0
-
+from torchsummary import summary
 
 def get_data(name, data_dir):
     root = data_dir
@@ -143,7 +143,7 @@ def main_worker(args):
 
     sys.stdout = Logger(osp.join(args.logs_dir, 'log.txt'))
     print("==========\nArgs:{}\n==========".format(args))
-
+    print("hello1")
     # dataset
     dataset = get_data(args.dataset, args.data_dir)
     test_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers)
@@ -152,9 +152,13 @@ def main_worker(args):
 
     # model
     num_part = args.part
-    model = resnet50part(num_parts=args.part, num_classes=3000)
+    model = resnet50part(num_parts=args.part, num_classes=751)
     model.cuda()
+
+    summary(model, input_size=(3, 384, 128))
+    print("hello")
     model = nn.DataParallel(model)
+
 
     # load a checkpoint
     checkpoint = load_checkpoint(args.resume)
@@ -174,15 +178,19 @@ def main_worker(args):
 
     score_log = torch.FloatTensor([])
     for epoch in range(args.epochs):
-        features_g, features_p, _ = extract_all_features(model, cluster_loader)
+        
+        features_g, features_p, images, _ = extract_all_features(model, cluster_loader)
         features_g = torch.cat([features_g[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
         features_p = torch.cat([features_p[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
-
+        #images = torch.cat([images[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
+        print(f"images shape:{images.shape}")
+        print(f"features g shape:{features_g.shape}")
+        # print(f"cluster loader:{cluster_loader.keys()}")
         if epoch == 0:
-            cluster = DBSCAN(eps=args.eps, min_samples=4, metric='precomputed', n_jobs=8)
-        print(cluster)
+            #cluster = DBSCAN(eps=args.eps, min_samples=4, metric='precomputed', n_jobs=8)
+            algorithm = Algorithm(model=model,x_lb=images, dataset = dataset)
         # assign pseudo-labels
-        pseudo_labels, num_class = compute_pseudo_labels(features_g, cluster, args.k1)
+        pseudo_labels, num_class = algorithm.evaluate(num_classes=751, batch_size=16)
 
 
         # Compute the cross-agreement

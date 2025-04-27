@@ -54,6 +54,51 @@ def extract_features(model, data_loader, print_freq=50):
 
 
 def extract_all_features(model, data_loader, print_freq=200):
+    print("enter extract all features")
+    model.eval()
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+
+    features_g = OrderedDict()
+    features_p = OrderedDict()
+    labels = OrderedDict()
+    images = OrderedDict()
+
+    end = time.time()
+    with torch.no_grad():
+        for i, (imgs, fnames, pids, _, _) in enumerate(data_loader):
+            data_time.update(time.time() - end)
+            inputs = to_torch(imgs).cuda()
+            #print("1",inputs.shape) #torch.Size([5, 3, 384, 128])
+            if isinstance(model, nn.DataParallel):
+                outputs_g, outputs_p = model.module.extract_all_features(inputs)
+            else:
+                outputs_g, outputs_p = model.extract_all_features(inputs)
+            #print("2",inputs.shape) #torch.Size([5, 3, 384, 128])
+            outputs_g, outputs_p, inputs= outputs_g.data.cpu(), outputs_p.data.cpu(), inputs.data.cpu()
+            
+
+            for fname, output_g, output_p, pid, input_ in zip(fnames, outputs_g, outputs_p, pids, inputs):
+                features_g[fname] = output_g
+                features_p[fname] = output_p
+                labels[fname] = pid
+                images[fname] = input_
+                #print(input_.shape) #torch.Size([3, 384, 128])
+
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if (i + 1) % print_freq == 0:
+                print('Extract Features: [{}/{}]\t'
+                      'Time {:.3f} ({:.3f})\t'
+                      'Data {:.3f} ({:.3f})\t'
+                      .format(i + 1, len(data_loader),
+                              batch_time.val, batch_time.avg,
+                              data_time.val, data_time.avg))
+        #print(features_g.shape, features_p.shape, images.shape, labels.shape)
+        return features_g, features_p, images, labels
+
+def return_batch_images(model, data_loader, print_freq=200):
     model.eval()
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -67,29 +112,8 @@ def extract_all_features(model, data_loader, print_freq=200):
         for i, (imgs, fnames, pids, _, _) in enumerate(data_loader):
             data_time.update(time.time() - end)
             inputs = to_torch(imgs).cuda()
-            if isinstance(model, nn.DataParallel):
-                outputs_g, outputs_p = model.module.extract_all_features(inputs)
-            else:
-                outputs_g, outputs_p = model.extract_all_features(inputs)
-            outputs_g, outputs_p = outputs_g.data.cpu(), outputs_p.data.cpu()
 
-            for fname, output_g, output_p, pid in zip(fnames, outputs_g, outputs_p, pids):
-                features_g[fname] = output_g
-                features_p[fname] = output_p
-                labels[fname] = pid
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if (i + 1) % print_freq == 0:
-                print('Extract Features: [{}/{}]\t'
-                      'Time {:.3f} ({:.3f})\t'
-                      'Data {:.3f} ({:.3f})\t'
-                      .format(i + 1, len(data_loader),
-                              batch_time.val, batch_time.avg,
-                              data_time.val, data_time.avg))
-
-        return features_g, features_p, labels
+        return inputs
 
 
 def pairwise_distance(features, query=None, gallery=None):

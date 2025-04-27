@@ -333,7 +333,8 @@ class AlgorithmBase:
             for data in eval_loader:
                 x = data['x_lb']
                 y = data['y_lb']
-
+                print("x",x.shape)
+                print("y", y.shape)
                 if isinstance(x, dict):
                     x = {k: v.cuda(self.gpu) for k, v in x.items()}
                 else:
@@ -343,6 +344,7 @@ class AlgorithmBase:
                 num_batch = y.shape[0]
                 total_num += num_batch
                 logits = self.model(x)[out_key]  # Get model predictions
+                print("logits", logits.shape)
                 loss = F.cross_entropy(logits, y, reduction='mean', ignore_index=-1)
 
                 y_true.extend(y.cpu().tolist())
@@ -359,7 +361,7 @@ class AlgorithmBase:
         y_pred = np.array(y_pred)
         y_logits = np.concatenate(y_logits)
         y_probs = np.array(y_probs)
-
+        print("y_pred", y_pred.shape)
         # Compute standard metrics
         top1 = accuracy_score(y_true, y_pred)
         top5 = top_k_accuracy_score(y_true, y_probs, k=5)

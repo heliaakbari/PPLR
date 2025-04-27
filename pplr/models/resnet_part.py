@@ -129,10 +129,16 @@ class ResNetPart(nn.Module):
             f_p_i = F.normalize(f_p_i)
             fs_p.append(f_p_i)
         fs_p = torch.stack(fs_p, dim=-1)
-
+        #print(x.shape, f_g.shape, f_p.shape, fs_p.shape) #torch.Size([5, 2048, 24, 8]) torch.Size([5, 2048]) torch.Size([5, 2048, 3]) torch.Size([5, 2048, 3])
         return f_g, fs_p
 
-
+    def extract_global_classes(self,x):
+        x = self.base(x)
+        f_g = self.gap(x)
+        f_g = f_g.view(x.size(0), -1)
+        f_g = self.bnneck(f_g)
+        return self.classifier(f_g)
+    
 def resnet18part(**kwargs):
     return ResNetPart(18, **kwargs)
 
