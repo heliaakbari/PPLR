@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import
 import argparse
 import os.path as osp
 import random
+from re import X
 import numpy as np
 import sys
 import time
@@ -12,7 +13,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.backends import cudnn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from semilearn.core.evaluate_label import Algorithm
 from pplr import datasets
 from pplr.models import resnet50part
@@ -179,18 +180,19 @@ def main_worker(args):
     score_log = torch.FloatTensor([])
     for epoch in range(args.epochs):
         
-        features_g, features_p, images, _ = extract_all_features(model, cluster_loader)
+        features_g, features_p, classes, _ = extract_all_features(model, cluster_loader)
         features_g = torch.cat([features_g[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
         features_p = torch.cat([features_p[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
-        #images = torch.cat([images[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
-        print(f"images shape:{images.shape}")
+        classes = torch.cat([torch.tensor([classes[f]]) for f, _, _ in sorted(dataset.train)], dim=0)
+        print(f"classes shape:{classes.shape}")
         print(f"features g shape:{features_g.shape}")
         # print(f"cluster loader:{cluster_loader.keys()}")
-        if epoch == 0:
+        #if epoch == 0:
             #cluster = DBSCAN(eps=args.eps, min_samples=4, metric='precomputed', n_jobs=8)
-            algorithm = Algorithm(model=model,x_lb=images, dataset = dataset)
+        #    algorithm = Algorithm(model=model, x_lb=images, dataset = dataset)
         # assign pseudo-labels
-        pseudo_labels, num_class = algorithm.evaluate(num_classes=751, batch_size=16)
+        pseudo_labels = classes
+        num_class = 751
 
 
         # Compute the cross-agreement

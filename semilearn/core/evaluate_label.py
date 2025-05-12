@@ -9,12 +9,13 @@ class Algorithm:
     def __init__(
         self,
         model,
-        x_lb, dataset):
+        x_lb,
+        dataset):
         self.gpu = 0
         self.ema = None
         # cv, nlp, speech builder different arguments
-        self.model = model
-        self.x_lb = x_lb
+        self.model = model.cuda(self.gpu)
+        self.x_lb = x_lb.cuda(self.gpu)
         self.dataset = dataset
 
     def evaluate(self, num_classes, batch_size, eval_dest='eval', out_key='logits', return_logits=False):
@@ -58,6 +59,6 @@ class Algorithm:
         self.model.train()
 
         print(f"y_pred:{y_pred}")
-        num_unique = np.max(y_pred)
+        num_unique = np.unique(y_pred)
         print("Number of unique items:", num_unique)
         return y_pred, num_classes

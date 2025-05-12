@@ -62,7 +62,7 @@ def extract_all_features(model, data_loader, print_freq=200):
     features_g = OrderedDict()
     features_p = OrderedDict()
     labels = OrderedDict()
-    images = OrderedDict()
+    classes = OrderedDict()
 
     end = time.time()
     with torch.no_grad():
@@ -72,17 +72,18 @@ def extract_all_features(model, data_loader, print_freq=200):
             #print("1",inputs.shape) #torch.Size([5, 3, 384, 128])
             if isinstance(model, nn.DataParallel):
                 outputs_g, outputs_p = model.module.extract_all_features(inputs)
+                logits = model.module.extract_global_classes(inputs)
             else:
                 outputs_g, outputs_p = model.extract_all_features(inputs)
+                logits = model.extract_global_classes(inputs)
             #print("2",inputs.shape) #torch.Size([5, 3, 384, 128])
-            outputs_g, outputs_p, inputs= outputs_g.data.cpu(), outputs_p.data.cpu(), inputs.data.cpu()
+            outputs_g, outputs_p, y_logits, inputs= outputs_g.data.cpu(), outputs_p.data.cpu(), logits.data.cpu(), inputs.data.cpu()
             
-
-            for fname, output_g, output_p, pid, input_ in zip(fnames, outputs_g, outputs_p, pids, inputs):
+            for fname, output_g, output_p, y_logit, pid, input_ in zip(fnames, outputs_g, outputs_p, y_logits, pids, inputs):
                 features_g[fname] = output_g
                 features_p[fname] = output_p
                 labels[fname] = pid
-                images[fname] = input_
+                classes[fname] = torch.max(y_logit, dim=-1)[1].cpu().tolist()
                 #print(input_.shape) #torch.Size([3, 384, 128])
 
             batch_time.update(time.time() - end)
@@ -96,7 +97,7 @@ def extract_all_features(model, data_loader, print_freq=200):
                               batch_time.val, batch_time.avg,
                               data_time.val, data_time.avg))
         #print(features_g.shape, features_p.shape, images.shape, labels.shape)
-        return features_g, features_p, images, labels
+        return features_g, features_p, classes, labels
 
 def return_batch_images(model, data_loader, print_freq=200):
     model.eval()
