@@ -23,7 +23,7 @@ class PPLRTrainer(object):
 
         
 
-    def train(self, epoch, train_dataloader, optimizer, print_freq=1, train_iters=200):
+    def train(self, epoch, lb_train_dataloader, ulb_train_dataloader, optimizer, print_freq=1, train_iters=200):
         self.model.train()
 
         batch_time = AverageMeter()
@@ -35,8 +35,11 @@ class PPLRTrainer(object):
         time.sleep(1)
         end = time.time()
         for i in range(train_iters):
-            data = train_dataloader.next()
-            inputs, targets, ca = self._parse_data(data)
+
+            #data_ulb = ulb_train_dataloader.next()
+            data_lb = lb_train_dataloader.next()
+            inputs, targets, ca = self._parse_data(data_lb)
+            #ulb_inputs, ulb_targets, ulb_ca = self._parse_data(data_ulb)
 
             # feedforward
             emb_g, emb_p, logits_g, logits_p = self.model(inputs)
@@ -81,7 +84,7 @@ class PPLRTrainer(object):
                       'L_PCE {:.3f} ({:.3f})\t'
                       'L_TRI {:.3f} ({:.3f})\t'
                       'Prec {:.2%} ({:.2%})\t'
-                      .format(epoch, i + 1, len(train_dataloader),
+                      .format(epoch, i + 1, len(lb_train_dataloader),
                               batch_time.val, batch_time.avg,
                               losses_gce.val, losses_gce.avg,
                               losses_pce.val, losses_pce.avg,
@@ -89,8 +92,10 @@ class PPLRTrainer(object):
                               precisions.val, precisions.avg))
 
     def _parse_data(self, inputs):
-        imgs, _, pids, _, idxs = inputs
+        imgs, fnames, pids, _, idxs, _ = inputs
+        print(fnames)
         ca = self.score[idxs]
+        print(ca)
         return imgs.cuda(), pids.cuda(), ca.cuda()
 
 

@@ -66,20 +66,22 @@ def extract_all_features(model, data_loader, print_freq=200):
 
     end = time.time()
     with torch.no_grad():
-        for i, (imgs, fnames, pids, _, _) in enumerate(data_loader):
+        for i, (imgs, fnames, pids, _, _, is_lb) in enumerate(data_loader):
             data_time.update(time.time() - end)
             inputs = to_torch(imgs).cuda()
             #print("1",inputs.shape) #torch.Size([5, 3, 384, 128])
             if isinstance(model, nn.DataParallel):
                 outputs_g, outputs_p = model.module.extract_all_features(inputs)
+                
                 logits = model.module.extract_global_classes(inputs)
             else:
                 outputs_g, outputs_p = model.extract_all_features(inputs)
+                
                 logits = model.extract_global_classes(inputs)
             #print("2",inputs.shape) #torch.Size([5, 3, 384, 128])
-            outputs_g, outputs_p, y_logits, inputs= outputs_g.data.cpu(), outputs_p.data.cpu(), logits.data.cpu(), inputs.data.cpu()
+            outputs_g, outputs_p, y_logits = outputs_g.data.cpu(), outputs_p.data.cpu(), logits.data.cpu()
             
-            for fname, output_g, output_p, y_logit, pid, input_ in zip(fnames, outputs_g, outputs_p, y_logits, pids, inputs):
+            for fname, output_g, output_p, y_logit, pid, in zip(fnames, outputs_g, outputs_p, y_logits, pids):
                 features_g[fname] = output_g
                 features_p[fname] = output_p
                 labels[fname] = pid

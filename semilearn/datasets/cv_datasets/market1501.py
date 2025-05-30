@@ -106,9 +106,9 @@ def get_ssl_dset(args, algorithm, data_dir, num_classes, num_labels, include_lb_
     )
     train_transform, strong_transform, _ = get_transforms()
 
-    lb_dset = BasicDataset(algorithm, lb_data, lb_targets, num_classes, train_transform, False, onehot=onehot)
-    ulb_dset = BasicDataset(algorithm, ulb_data, ulb_targets, num_classes, train_transform, True, strong_transform=strong_transform, onehot=onehot)
-    return lb_dset, ulb_dset
+    # lb_dset = BasicDataset(algorithm, lb_data, lb_targets, num_classes, train_transform, False, onehot=onehot)
+    # ulb_dset = BasicDataset(algorithm, ulb_data, ulb_targets, num_classes, train_transform, True, strong_transform=strong_transform, onehot=onehot)
+    return lb_data, lb_targets, ulb_data, ulb_targets
 
 
 def get_market1501(args, algorithm, data_dir, num_classes, num_labels):
