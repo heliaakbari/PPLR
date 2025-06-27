@@ -54,7 +54,7 @@ def map_paths_to_full_entries(paths, full_dataset):
 
 
 def get_train_loader(dataset, height, width, batch_size, workers,
-                     num_instances, iters, trainset=None):
+                     num_instances, iters, trainset=None, is_lb=None):
 
     normalizer = T.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
@@ -75,7 +75,7 @@ def get_train_loader(dataset, height, width, batch_size, workers,
     else:
         sampler = None
     train_loader = IterLoader(
-                DataLoader(Preprocessor(train_set, root=dataset.images_dir, transform=train_transformer),
+                DataLoader(Preprocessor(train_set, root=dataset.images_dir, transform=train_transformer, is_lb=is_lb),
                            batch_size=batch_size, num_workers=workers, sampler=sampler,
                            shuffle=not rmgs_flag, pin_memory=True, drop_last=True), length=iters)
 
@@ -167,16 +167,13 @@ def main_worker(args):
     # dataset
     dataset = get_data(args.dataset, args.data_dir)
     lb_data, lb_targets, ulb_data, ulb_target = get_ssl_dset(args, args.algorithm, args.data_dir, args.num_classes, args.num_labels)
-    print("lb_data length: ", len(lb_data))
-    print("ulb_data length: ", len(ulb_data))
+
 
     lb_data_dset = map_paths_to_full_entries(lb_data, dataset.train)
     ulb_data_dset = map_paths_to_full_entries(ulb_data, dataset.train)
-    print("lb_data_dset length: ", len(lb_data_dset))
-    print("ulb_data_dset length: ", len(ulb_data_dset))
-    print("ulb_data_dset [0[]]: ", ulb_data_dset[100])
 
-    test_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers)
+
+    test_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers, is_lb=0)
 
     lb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers,
                                      testset=sorted(lb_data_dset), is_lb=1)
@@ -255,25 +252,17 @@ def main_worker(args):
                 pids.append(pid)
         
         for j, ((lb_fname, _, lb_cid), lb_label) in enumerate(zip(sorted(lb_data_dset), lb_labels)):
-            lb_pid = lb_label
+            lb_pid = lb_label.item()
             if lb_pid >= num_class:  # append data except outliers
                 num_outliers += 1
             else:
                 lb_new_dataset.append((lb_fname, lb_pid, lb_cid))
 
-        print("ulb new dataset: ", len(ulb_new_dataset))
-        print("lb new dataset: ", len(lb_new_dataset))
-
         lb_train_loader = get_train_loader(dataset, args.height, args.width, args.batch_size,
-                                        args.workers, args.num_instances, args.iters, trainset=lb_new_dataset)
-        
-        print(lb_train_loader.loader.dataset[0])
-
+                                        args.workers, args.num_instances, args.iters, trainset=lb_new_dataset, is_lb=1)
 
         ulb_train_loader = get_train_loader(dataset, args.height, args.width, args.batch_size*args.uratio,
-                                        args.workers, args.num_instances, args.iters, trainset=ulb_new_dataset)
-
-        
+                                        args.workers, args.num_instances, args.iters, trainset=ulb_new_dataset, is_lb=0)
 
         # statistics of clusters and un-clustered instances
         print('==> Statistics for epoch {}: {} clusters, {} un-clustered instances'.format(epoch, num_class,

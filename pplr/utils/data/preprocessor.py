@@ -9,7 +9,7 @@ from PIL import Image
 
 
 class Preprocessor(Dataset):
-    def __init__(self, dataset, root=None, transform=None, is_lb=None):
+    def __init__(self, dataset, root=None, transform=None, is_lb=0):
         super(Preprocessor, self).__init__()
         self.dataset = dataset
         self.root = root
@@ -23,18 +23,16 @@ class Preprocessor(Dataset):
         return self._get_single_item(indices)
 
     def _get_single_item(self, index):
-        try:
-            fname, pid, camid = self.dataset[index]
-            fpath = fname
-            if self.root is not None:
-                fpath = osp.join(self.root, fname)
+        
+        fname, pid, camid = self.dataset[index]
+        fpath = fname
+        if self.root is not None:
+            fpath = osp.join(self.root, fname)
 
-            img = Image.open(fpath).convert('RGB')
+        img = Image.open(fpath).convert('RGB')
 
-            if self.transform is not None:
-                img = self.transform(img)
+        if self.transform is not None:
+            img = self.transform(img)
 
-            return img, fname, pid, camid, index, self.is_lb
-        except Exception as e:
-            print(f"Error loading sample {index}: {e}")
-            return None
+        return img, fname, pid, camid, index, self.is_lb
+        
