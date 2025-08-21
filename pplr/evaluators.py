@@ -8,6 +8,12 @@ import torch.nn as nn
 import random
 import copy
 
+
+import os
+import matplotlib.pyplot as plt
+from PIL import Image
+import torchvision.transforms as transforms
+from torchvision.transforms import functional as F
 from .evaluation_metrics import cmc, mean_ap
 from .utils.meters import AverageMeter
 from .utils.rerank import re_ranking
@@ -54,6 +60,7 @@ def extract_features(model, data_loader, print_freq=50):
 
 
 def extract_all_features(model, data_loader, print_freq=200):
+    correctLabels= 0
     print("enter extract all features")
     model.eval()
     batch_time = AverageMeter()
@@ -65,10 +72,21 @@ def extract_all_features(model, data_loader, print_freq=200):
     classes = OrderedDict()
 
     end = time.time()
+    train_transform = transforms.Compose([
+            transforms.Resize((384, 128)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop((384, 128), padding=(int(384 * (1 - 0.875)), int(128 * (1 - 0.875))), padding_mode='reflect'),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ])
     with torch.no_grad():
         for i, (imgs, fnames, pids, _, _, is_lb) in enumerate(data_loader):
+            #print(f"pids in extract all features:  {pids}")
             data_time.update(time.time() - end)
+            
+            w_imgs = torch.stack([train_transform(img) for img in imgs])
             inputs = to_torch(imgs).cuda()
+            w_inputs = to_torch(w_imgs).cuda()
+
             #print("1",inputs.shape) #torch.Size([5, 3, 384, 128])
             if isinstance(model, nn.DataParallel):
                 outputs_g, outputs_p = model.module.extract_all_features(inputs)
@@ -87,7 +105,6 @@ def extract_all_features(model, data_loader, print_freq=200):
                 labels[fname] = pid
                 classes[fname] = torch.max(y_logit, dim=-1)[1].cpu().tolist()
                 #print(input_.shape) #torch.Size([3, 384, 128])
-
             batch_time.update(time.time() - end)
             end = time.time()
 
@@ -99,6 +116,7 @@ def extract_all_features(model, data_loader, print_freq=200):
                               batch_time.val, batch_time.avg,
                               data_time.val, data_time.avg))
         #print(features_g.shape, features_p.shape, images.shape, labels.shape)
+        print(f"number of correct labels: {correctLabels}")
         return features_g, features_p, classes, labels
 
 def return_batch_images(model, data_loader, print_freq=200):
@@ -137,6 +155,44 @@ def pairwise_distance(features, query=None, gallery=None):
            torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
     dist_m.addmm_(1, -2, x, y.t())
     return dist_m, x.numpy(), y.numpy()
+
+
+def visualize_ranked_results(distmat, query, gallery, save_dir, topk=3):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    distmat = distmat.numpy() if isinstance(distmat, torch.Tensor) else distmat
+
+    query_fnames = [f for f, _, _ in query]
+    gallery_fnames = [f for f, _, _ in gallery]
+    gallery_ids = [pid for _, pid, _ in gallery]
+
+    for i, q_fname in enumerate(query_fnames):
+        q_pid = query[i][1]
+        q_img = Image.open(q_fname).convert('RGB')
+        
+        sorted_idxs = np.argsort(distmat[i])
+        topk_idxs = [idx for idx in sorted_idxs if gallery_ids[idx] != q_pid][:topk]
+
+        fig, axes = plt.subplots(1, topk + 1, figsize=(4*(topk + 1), 6))
+        axes[0].imshow(q_img)
+        axes[0].set_title(f"Query\nID: {q_pid}", fontsize=10)
+        axes[0].axis('off')
+
+        for rank, idx in enumerate(topk_idxs):
+            g_fname = gallery_fnames[idx]
+            g_pid = gallery[idx][1]
+            score = distmat[i][idx]
+            g_img = Image.open(g_fname).convert('RGB')
+
+            axes[rank + 1].imshow(g_img)
+            axes[rank + 1].set_title(f"Rank-{rank+1}\nID: {g_pid}\n Distance: {score:.2f}", fontsize=10)
+            axes[rank + 1].axis('off')
+
+        save_path = os.path.join(save_dir, f"query_{i}_id_{q_pid}.png")
+        plt.tight_layout()
+        plt.savefig(save_path)
+        plt.close()
 
 
 def evaluate_all(query_features, gallery_features, distmat, query=None, gallery=None,
@@ -178,9 +234,11 @@ class Evaluator(object):
         super(Evaluator, self).__init__()
         self.model = model
 
-    def evaluate(self, data_loader, query, gallery, cmc_flag=False, rerank=False):
+    def evaluate(self, data_loader, query, gallery, epoch, cmc_flag=False, rerank=False):
         features, _ = extract_features(self.model, data_loader)
         distmat, query_features, gallery_features = pairwise_distance(features, query, gallery)
+        #if epoch % 10 == 0:
+            #visualize_ranked_results(distmat, query, gallery,  save_dir=f'visual_results/epoch{epoch}/', topk=3)
         results = evaluate_all(query_features, gallery_features, distmat, query=query, gallery=gallery, cmc_flag=cmc_flag)
 
         if (not rerank):

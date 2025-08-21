@@ -1,31 +1,48 @@
-==========
-Args:Namespace(aals_epoch=5, batch_size=16, beta=0.5, data_dir='/home/zakerian/PPLR/PPLRFORK/PPLR/data', dataset='market1501', epochs=50, eps=0.5, eval_step=1, height=384, iters=1000, k=20, k1=30, k2=6, logs_dir='fixmatch_pplr_751_class', lr=0.000175, num_instances=4, part=3, print_freq=10, seed=1, step_size=20, weight_decay=0.0005, width=128, workers=4)
-==========
-=> Market1501 loaded
-Dataset statistics:
-  ----------------------------------------
-  subset   | # ids | # images | # cameras
-  ----------------------------------------
-  train    |   751 |    12936 |         6
-  query    |   750 |     3368 |         6
-  gallery  |   751 |    15913 |         6
-  ----------------------------------------
-=> Loaded checkpoint '/home/zakerian/USB/fork2/Semi-supervised-learning/saved_models/usb_cv/fixmatch_market1501_resent50part/latest_model.pth'
-loading from myserialization
-/home/zakerian/miniconda3/envs/pplr/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
-  warnings.warn(
-/home/zakerian/miniconda3/envs/pplr/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=None`.
-  warnings.warn(msg)
-Extract Features: [50/809]	Time 0.042 (0.075)	Data 0.000 (0.004)	
-Extract Features: [100/809]	Time 0.032 (0.056)	Data 0.000 (0.002)	
-Extract Features: [150/809]	Time 0.037 (0.049)	Data 0.000 (0.001)	
+nohup: ignoring input
+usage: train_pplr.py [-h] [-d DATASET] [-b BATCH_SIZE] [-j WORKERS]
+                     [-n NUM_INSTANCES] [--height HEIGHT] [--width WIDTH]
+                     [--data-dir PATH] [--logs-dir PATH] --resume PATH
+                     [--seed SEED] [--print-freq PRINT_FREQ]
+                     [--eval-step EVAL_STEP]
+                     [--labled-in-centroid LABLED_IN_CENTROID] [--part PART]
+                     [--k K] [--beta BETA] [--aals-epoch AALS_EPOCH] [--lr LR]
+                     [--weight-decay WEIGHT_DECAY] [--epochs EPOCHS]
+                     [--iters ITERS] [--step-size STEP_SIZE] [--k1 K1]
+                     [--k2 K2] [--eps EPS]
+                     [--include_lb_to_ulb INCLUDE_LB_TO_ULB]
+                     [--lb_imb_ratio LB_IMB_RATIO]
+                     [--ulb_imb_ratio ULB_IMB_RATIO]
+                     [--ulb_num_labels ULB_NUM_LABELS] [--uratio URATIO]
+                     [--ulb_loss_ratio ULB_LOSS_RATIO] [-nl NUM_LABELS]
+                     [-alg ALGORITHM] [-nc NUM_CLASSES]
+train_pplr.py: error: unrecognized arguments: n
 Traceback (most recent call last):
-  File "train_pplr.py", line 306, in <module>
-    main()
-  File "train_pplr.py", line 136, in main
-    main_worker(args)
-  File "train_pplr.py", line 177, in main_worker
-    features_g, features_p, _ = extract_all_features(model, cluster_loader)
-  File "/home/zakerian/PPLR/PPLRFORK/PPLR/pplr/evaluators.py", line 74, in extract_all_features
-    outputs_g, outputs_p = outputs_g.data.cpu(), outputs_p.data.cpu()
+  File "train_pplr.py", line 20, in <module>
+    from pplr import datasets
+  File "/teamspace/studios/this_studio/PPLR/pplr/__init__.py", line 7, in <module>
+    from . import evaluators
+  File "/teamspace/studios/this_studio/PPLR/pplr/evaluators.py", line 13, in <module>
+    import matplotlib.pyplot as plt
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/site-packages/matplotlib/pyplot.py", line 55, in <module>
+    from matplotlib import rcsetup, style
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/site-packages/matplotlib/style/__init__.py", line 1, in <module>
+    from .core import available, context, library, reload_library, use
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/site-packages/matplotlib/style/core.py", line 271, in <module>
+    _base_library = read_style_directory(BASE_LIBRARY_PATH)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/site-packages/matplotlib/style/core.py", line 238, in read_style_directory
+    for path in Path(style_dir).glob(f"*.{STYLE_EXTENSION}"):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/pathlib.py", line 1139, in glob
+    selector = _make_selector(tuple(pattern_parts), self._flavour)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/pathlib.py", line 473, in _make_selector
+    return cls(pat, child_parts, flavour)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/pathlib.py", line 529, in __init__
+    self.match = flavour.compile_pattern(pat)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/pathlib.py", line 315, in compile_pattern
+    return re.compile(fnmatch.translate(pattern)).fullmatch
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/re.py", line 252, in compile
+    return _compile(pattern, flags)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/re.py", line 304, in _compile
+    p = sre_compile.compile(pattern, flags)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.8/sre_compile.py", line 775, in compile
+    groupindex = p.state.groupdict
 KeyboardInterrupt

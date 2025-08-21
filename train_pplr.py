@@ -6,7 +6,6 @@ from re import X
 import numpy as np
 import sys
 import time
-
 from sklearn.cluster import DBSCAN
 
 import torch
@@ -17,6 +16,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from semilearn.core.evaluate_label import Algorithm
 from semilearn.datasets.cv_datasets.market1501 import get_ssl_dset
 from semilearn.algorithms.utils import str2bool
+from semilearn.algorithms.hooks.pseudo_label import PseudoLabelingHook
 from pplr import datasets
 from pplr.models import resnet50part
 from pplr.trainers import PPLRTrainer
@@ -29,6 +29,7 @@ from pplr.utils.logging import Logger
 from pplr.utils.faiss_rerank import compute_ranked_list, compute_jaccard_distance
 from pplr.utils.myserialization_pplr import load_checkpoint, copy_state_dict
 best_mAP = 0
+
 from torchsummary import summary
 
 def get_data(name, data_dir):
@@ -163,23 +164,28 @@ def main_worker(args):
 
     sys.stdout = Logger(osp.join(args.logs_dir, 'log.txt'))
     print("==========\nArgs:{}\n==========".format(args))
-    print("hello1")
     # dataset
-    dataset = get_data(args.dataset, args.data_dir)
-    lb_data, lb_targets, ulb_data, ulb_target = get_ssl_dset(args, args.algorithm, args.data_dir, args.num_classes, args.num_labels)
 
+    dataset = get_data(args.dataset, args.data_dir)
+    print(f"dataset train-168: {len(dataset.train)}, {dataset.train[0]}")
+    lb_data, lb_targets, ulb_data, ulb_target = get_ssl_dset(args, args.algorithm, args.data_dir, args.num_classes, args.num_labels)
+    print(f"lb_data: {len(lb_data)}, {lb_data[0]}")
+    print(f"lb_targets: {len(lb_targets)}, {lb_targets[0]} ")
+    #print(', '.join(str(x) for x in lb_targets))
+    print(f"ulb_data: {len(ulb_data)}, {ulb_data[0]}")
+    print(f"ulb_target: {len(ulb_target)}, {ulb_target[0]}")
+    #print(', '.join(str(x) for x in ulb_target))
 
     lb_data_dset = map_paths_to_full_entries(lb_data, dataset.train)
     ulb_data_dset = map_paths_to_full_entries(ulb_data, dataset.train)
+    print(f"lb_data_dset: {len(lb_data_dset)}, {lb_data_dset[0:10]}")
+    print(f"ulb_data_dset: {len(ulb_data_dset)}, {ulb_data_dset[0:10]}")
 
 
     test_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers, is_lb=0)
+    lb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers,testset=sorted(lb_data_dset), is_lb=1)
 
-    lb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers,
-                                     testset=sorted(lb_data_dset), is_lb=1)
-
-    ulb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size*args.uratio, args.workers,
-                                     testset=sorted(ulb_data_dset), is_lb=0)
+    ulb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size*args.uratio, args.workers,testset=sorted(ulb_data_dset), is_lb=0)
 
 
     # model
@@ -228,12 +234,17 @@ def main_worker(args):
             #cluster = DBSCAN(eps=args.eps, min_samples=4, metric='precomputed', n_jobs=8)
         #    algorithm = Algorithm(model=model, x_lb=images, dataset = dataset)
         # assign pseudo-labels
+        #pseudo_labling_hook = PseudoLabelingHook()
+        #probs_x_ulb_w = torch.softmax(ulb_logits.detach(), dim=-1)
         pseudo_labels = ulb_classes
         num_class = 751
 
 
         # Compute the cross-agreement
+        
         score = compute_cross_agreement(ulb_features_g, ulb_features_p, k=args.k)
+        print(f"cross agreement score head: {score[:5]}")
+        print(f"cross agreement score shape: {score.shape}")
         score_log = torch.cat([score_log, score.unsqueeze(0)], dim=0)
 
         # generate new dataset with pseudo-labels
@@ -270,10 +281,13 @@ def main_worker(args):
 
         # reindex
         idxs, pids = np.asarray(idxs), np.asarray(pids)
-        #features_g = features_g[idxs, :]
-        #features_p = features_p[idxs, :, :]
+        #ulb_features_g = ulb_features_g[idxs, :]
+        #ulb_features_p = ulb_features_p[idxs, :, :]
         score = score[idxs, :]
 
+        print(f"idxs: {idxs.shape}, {idxs[0:10]}")
+        print(f"pids: {pids.shape}, {pids[0:10]}")
+        print(f"score: {score.shape}, {score[0:10]}")
         # compute cluster centroids
         centroids_g, centroids_p = [], []
         for pid in sorted(np.unique(pids)):  # loop all pids
@@ -281,11 +295,16 @@ def main_worker(args):
             centroids_g.append(ulb_features_g[idxs_p].mean(0))
             centroids_p.append(ulb_features_p[idxs_p].mean(0))
 
+        print(f"centeriod g before normal: {len(centroids_g)}, {centroids_g[0:10]}")
         centroids_g = F.normalize(torch.stack(centroids_g), p=2, dim=1)
+        print(f"centeroid g after normal: {len(centroids_g)}, {centroids_g[0:10]}")
+
         model.module.classifier.weight.data[:num_class].copy_(centroids_g)
+
         for i in range(num_part):
             centroids_p_i = torch.stack(centroids_p)[:, :, i]
             centroids_p_i = F.normalize(centroids_p_i, p=2, dim=1)
+            print(f"centeroid p_{i} after normal: {len(centroids_p_i)}, {centroids_p_i[0:10]}")
             classifier_p_i = getattr(model.module, 'classifier' + str(i))
             classifier_p_i.weight.data[:num_class].copy_(centroids_p_i)
 
@@ -301,7 +320,7 @@ def main_worker(args):
 
         # evaluation
         if ((epoch+1) % args.eval_step == 0) or (epoch == args.epochs-1):
-            mAP = evaluator.evaluate(test_loader, dataset.query, dataset.gallery, cmc_flag=False)
+            mAP = evaluator.evaluate(test_loader, dataset.query, dataset.gallery,epoch, cmc_flag=False)
 
             if mAP > best_mAP:
                 best_mAP = mAP
@@ -313,7 +332,7 @@ def main_worker(args):
 
     # results
     model.load_state_dict(torch.load(osp.join(args.logs_dir, 'best.pth')))
-    evaluator.evaluate(test_loader, dataset.query, dataset.gallery, cmc_flag=True)
+    evaluator.evaluate(test_loader, dataset.query, dataset.gallery, epoch, cmc_flag=True)
 
 
 if __name__ == '__main__':
@@ -338,9 +357,9 @@ if __name__ == '__main__':
     parser.add_argument('--resume', type=str, required=True, metavar='PATH')
     # training configs
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--print-freq', type=int, default=10)
+    parser.add_argument('--print-freq', type=int, default=100)
     parser.add_argument('--eval-step', type=int, default=1)
-
+    parser.add_argument('--labled-in-centroid', type=bool, default=True)
     # PPLR
     parser.add_argument('--part', type=int, default=3, help="number of part")
     parser.add_argument('--k', type=int, default=20,

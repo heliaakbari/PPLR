@@ -53,7 +53,7 @@ class FixedThresholdingHook(MaskingHook):
             # logits is already probs
             probs_x_ulb = logits_x_ulb.detach()
         max_probs, _ = torch.max(probs_x_ulb, dim=-1)
-        mask = max_probs.ge(algorithm.p_cutoff).to(max_probs.dtype)
+        mask = max_probs.ge(0.95).to(max_probs.dtype)
         return mask
 
 
