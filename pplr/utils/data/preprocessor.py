@@ -9,11 +9,12 @@ from PIL import Image
 
 
 class Preprocessor(Dataset):
-    def __init__(self, dataset, root=None, transform=None):
+    def __init__(self, dataset, root=None, transform=None, is_lb=0):
         super(Preprocessor, self).__init__()
         self.dataset = dataset
         self.root = root
         self.transform = transform
+        self.is_lb = is_lb
 
     def __len__(self):
         return len(self.dataset)
@@ -22,6 +23,7 @@ class Preprocessor(Dataset):
         return self._get_single_item(indices)
 
     def _get_single_item(self, index):
+        
         fname, pid, camid = self.dataset[index]
         fpath = fname
         if self.root is not None:
@@ -32,4 +34,5 @@ class Preprocessor(Dataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, fname, pid, camid, index
+        return img, fname, pid, camid, index, self.is_lb
+        

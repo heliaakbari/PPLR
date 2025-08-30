@@ -16,13 +16,12 @@ class CrossEntropyLabelSmooth(nn.Module):
         epsilon (float): weight.
     """
 
-    def __init__(self, num_classes, epsilon=0.1):
+    def __init__(self, num_classes):
         super(CrossEntropyLabelSmooth, self).__init__()
         self.num_classes = num_classes
-        self.epsilon = epsilon
         self.logsoftmax = nn.LogSoftmax(dim=1).cuda()
 
-    def forward(self, inputs, targets):
+    def forward(self, inputs, targets, epsilon):
         """
         Args:
             inputs: prediction matrix (before softmax) with shape (batch_size, num_classes)
@@ -30,7 +29,7 @@ class CrossEntropyLabelSmooth(nn.Module):
         """
         log_probs = self.logsoftmax(inputs)
         targets = torch.zeros_like(log_probs).scatter_(1, targets.unsqueeze(1), 1)
-        targets = (1 - self.epsilon) * targets + self.epsilon / self.num_classes
+        targets = (1 - epsilon) * targets + epsilon / self.num_classes
         loss = (- targets * log_probs).mean(0).sum()
         return loss
 

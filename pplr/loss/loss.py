@@ -22,19 +22,18 @@ class AALS(nn.Module):
 
 class PGLR(nn.Module):
     """ Part-guided label refinement """
-    def __init__(self, lam=0.5):
+    def __init__(self):
         super(PGLR, self).__init__()
         self.softmax = nn.Softmax(dim=1)
         self.logsoftmax = nn.LogSoftmax(dim=1)
-        self.lam = lam
 
-    def forward(self, logits_g, logits_p, targets, ca):
+    def forward(self, logits_g, logits_p, targets, ca, lam):
         targets = torch.zeros_like(logits_g).scatter_(1, targets.unsqueeze(1), 1)
         w = torch.softmax(ca, dim=1)  # B * P
         w = torch.unsqueeze(w, 1)  # B * 1 * P
         preds_p = self.softmax(logits_p)  # B * C * P
         ensembled_preds = (preds_p * w).sum(2).detach()  # B * class_num
-        refined_targets = self.lam * targets + (1-self.lam) * ensembled_preds
+        refined_targets = lam * targets + (1-lam) * ensembled_preds
 
         log_preds_g = self.logsoftmax(logits_g)
         loss = (-refined_targets * log_preds_g).sum(1).mean()
