@@ -21,7 +21,7 @@ class ResNetPart(nn.Module):
         152: torchvision.models.resnet152,
     }
 
-    def __init__(self, depth, pretrained=None, num_parts=3, num_classes=0):
+    def __init__(self, depth, pretrained=True, num_parts=3, num_classes=0):
         super(ResNetPart, self).__init__()
         self.pretrained = pretrained
         self.depth = depth
@@ -71,11 +71,13 @@ class ResNetPart(nn.Module):
         f_g = f_g.view(x.size(0), -1)
         f_g = self.bnneck(f_g)
 
-        if self.training is False:
-            f_g = F.normalize(f_g)
-            return f_g
 
         logits_g = self.classifier(f_g)
+
+        if self.training is False:
+            f_g = F.normalize(f_g)
+            return f_g , logits_g
+
 
         f_p = self.rap(x)
         f_p = f_p.view(f_p.size(0), f_p.size(1), -1)

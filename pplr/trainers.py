@@ -66,8 +66,8 @@ class PPLRTrainer(object):
             data_lb = lb_train_dataloader.next()
             #print(f"data_ulb in {i} iteration: {data_ulb[2]}")
             #print(f"data_lb in {i} iteration: {data_lb[2]}")
-            ulb_x, ulb_targets, ulb_ca, ulb_x_s = self._parse_data(data_ulb)
-            lb_x, lb_targets, lb_ca, lb_x_w = self._parse_data(data_lb)
+            ulb_x, ulb_targets, ulb_ca = self._parse_data(data_ulb)
+            lb_x, lb_targets, lb_ca = self._parse_data(data_lb)
             
 
             # feedforward
@@ -87,9 +87,14 @@ class PPLRTrainer(object):
             loss_tri = self.criterion_tri(emb_g, targets)
 
             # fixmatch loss
+            """
             mask = self.masking_hook.masking('fixmatch', logits_x_ulb=ulb_targets, softmax_x_ulb=False)
-            lb_emb_g_w, lb_emb_p_w, lb_logits_g_w, lb_logits_p_w = self.model(lb_x_w)
-            ulb_emb_g_s, ulb_emb_p_s, ulb_logits_g_s, ulb_logits_p_s = self.model(ulb_x_s)
+
+            self.model.eval()
+            lb_emb_g_w, lb_logits_g_w = self.model(lb_x_w)
+            ulb_emb_g_s, ulb_logits_g_s = self.model(ulb_x_s)
+
+            self.model.train()
 
             sup_loss = self.ce_loss(lb_logits_g_w, lb_targets, reduction='mean')
             unsup_loss = self.consistency_loss(ulb_logits_g_s,
@@ -97,7 +102,8 @@ class PPLRTrainer(object):
                                                'ce',
                                                mask=mask)
             fixmatch_loss = sup_loss + unsup_loss
-            
+            """
+
             loss_pce = 0.
             lb_loss_pce = 0.
             ulb_loss_pce = 0.
@@ -115,7 +121,7 @@ class PPLRTrainer(object):
                 loss_pce /= self.num_part
 
 
-            loss = loss_gce + loss_tri + loss_pce 
+            loss = loss_gce + loss_tri + loss_pce #  + fixmatch_loss
 
             # update
             optimizer.zero_grad()
@@ -129,7 +135,7 @@ class PPLRTrainer(object):
             losses_gce.update(loss_gce.item())
             losses_tri.update(loss_tri.item())
             losses_pce.update(loss_pce.item())
-            losses_fix.update(fixmatch_loss.item())
+            #losses_fix.update(fixmatch_loss.item())
             precisions.update(prec[0])
 
             batch_time.update(time.time() - end)
@@ -152,24 +158,22 @@ class PPLRTrainer(object):
                               losses_tri.val, losses_tri.avg,
                               losses_fix.val, losses_fix.avg,
                               precisions.val, precisions.avg))
-                print('    └─> Breakdown: LB_GCE: {:.3f}, ULB_GCE: {:.3f} | LB_PCE: {:.3f}, ULB_PCE: {:.3f} | FixMatch Sup: {:.3f}, Unsup: {:.3f}'
+                print('    └─> Breakdown: LB_GCE: {:.3f}, ULB_GCE: {:.3f} | LB_PCE: {:.3f}, ULB_PCE: {:.3f}'
                       .format(lb_loss_gce.item(), 
                               ulb_loss_gce.item(), 
                               lb_loss_pce.item() if isinstance(lb_loss_pce, torch.Tensor) else lb_loss_pce,
-                              ulb_loss_pce.item() if isinstance(ulb_loss_pce, torch.Tensor) else ulb_loss_pce,
-                              sup_loss.item(),
-                              unsup_loss.item()))
+                              ulb_loss_pce.item() if isinstance(ulb_loss_pce, torch.Tensor) else ulb_loss_pce))
 
     def _parse_data(self, inputs):
         imgs, _, pids, _, idxs, is_lb = inputs
         if is_lb[0].item():
             ca = torch.ones((is_lb.shape[0], 3), dtype=torch.float32)
-            w_imgs = torch.stack([self.transform(img) for img in imgs])
-            return imgs.cuda(), pids.cuda(), ca.cuda(), w_imgs.cuda()
+            #w_imgs = torch.stack([self.transform(img) for img in imgs])
+            return imgs.cuda(), pids.cuda(), ca.cuda()
         else:
-            s_imgs = torch.stack([self.strong_transform(img) for img in imgs])
+            #s_imgs = torch.stack([self.strong_transform(img) for img in imgs])
             ca = self.score[idxs]
-            return imgs.cuda(), pids.cuda(), ca.cuda(), s_imgs.cuda()
+            return imgs.cuda(), pids.cuda(), ca.cuda()
         
 
 

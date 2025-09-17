@@ -6,6 +6,7 @@ from re import X
 import numpy as np
 import sys
 import time
+
 from sklearn.cluster import DBSCAN
 
 import torch
@@ -164,33 +165,28 @@ def main_worker(args):
 
     sys.stdout = Logger(osp.join(args.logs_dir, 'log.txt'))
     print("==========\nArgs:{}\n==========".format(args))
+    print("hello1")
     # dataset
-
     dataset = get_data(args.dataset, args.data_dir)
-    print(f"dataset train-168: {len(dataset.train)}, {dataset.train[0]}")
     lb_data, lb_targets, ulb_data, ulb_target = get_ssl_dset(args, args.algorithm, args.data_dir, args.num_classes, args.num_labels)
-    print(f"lb_data: {len(lb_data)}, {lb_data[0]}")
-    print(f"lb_targets: {len(lb_targets)}, {lb_targets[0]} ")
-    #print(', '.join(str(x) for x in lb_targets))
-    print(f"ulb_data: {len(ulb_data)}, {ulb_data[0]}")
-    print(f"ulb_target: {len(ulb_target)}, {ulb_target[0]}")
-    #print(', '.join(str(x) for x in ulb_target))
+
 
     lb_data_dset = map_paths_to_full_entries(lb_data, dataset.train)
     ulb_data_dset = map_paths_to_full_entries(ulb_data, dataset.train)
-    print(f"lb_data_dset: {len(lb_data_dset)}, {lb_data_dset[0:10]}")
-    print(f"ulb_data_dset: {len(ulb_data_dset)}, {ulb_data_dset[0:10]}")
 
 
     test_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers, is_lb=0)
-    lb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers,testset=sorted(lb_data_dset), is_lb=1)
 
-    ulb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size*args.uratio, args.workers,testset=sorted(ulb_data_dset), is_lb=0)
+    lb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size, args.workers,
+                                     testset=sorted(lb_data_dset), is_lb=1)
+
+    ulb_cluster_loader = get_test_loader(dataset, args.height, args.width, args.batch_size*args.uratio, args.workers,
+                                     testset=sorted(ulb_data_dset), is_lb=0)
 
 
     # model
     num_part = args.part
-    model = resnet50part(num_parts=args.part, num_classes=751)
+    model = resnet50part(num_parts=args.part, num_classes=3000)
     model.cuda()
 
     summary(model, input_size=(3, 384, 128))
@@ -199,8 +195,8 @@ def main_worker(args):
 
 
     # load a checkpoint
-    checkpoint = load_checkpoint(args.resume)
-    copy_state_dict(checkpoint, model)
+    #checkpoint = load_checkpoint(args.resume)
+    #copy_state_dict(checkpoint, model)
 
     # evaluator
     evaluator = Evaluator(model)
@@ -225,7 +221,7 @@ def main_worker(args):
         print(f"labeled features g shape:{lb_features_g.shape}")
 
 
-        ulb_features_g, ulb_features_p, ulb_classes, _ = extract_all_features(model, ulb_cluster_loader)
+        ulb_features_g, ulb_features_p, ulb_classes, _= extract_all_features(model, ulb_cluster_loader)
         ulb_features_g = torch.cat([ulb_features_g[f].unsqueeze(0) for f, _, _ in sorted(ulb_data_dset)], 0)
         ulb_features_p = torch.cat([ulb_features_p[f].unsqueeze(0) for f, _, _ in sorted(ulb_data_dset)], 0)
         ulb_classes = torch.cat([torch.tensor([ulb_classes[f]]) for f, _, _ in sorted(ulb_data_dset)], dim=0)
@@ -241,10 +237,7 @@ def main_worker(args):
 
 
         # Compute the cross-agreement
-        
         score = compute_cross_agreement(ulb_features_g, ulb_features_p, k=args.k)
-        print(f"cross agreement score head: {score[:5]}")
-        print(f"cross agreement score shape: {score.shape}")
         score_log = torch.cat([score_log, score.unsqueeze(0)], dim=0)
 
         # generate new dataset with pseudo-labels
@@ -252,21 +245,28 @@ def main_worker(args):
         lb_new_dataset = []
         ulb_new_dataset = []
 
-        idxs, pids = [], []
-        for i, ((fname, _, cid), label) in enumerate(zip(sorted(ulb_data_dset), pseudo_labels)):
+        idxs, pids, lb_pids, lb_idxs = [], [], [], []
+        equalchecker = 0
+        for i, ((fname, x, cid), label) in enumerate(zip(sorted(ulb_data_dset), pseudo_labels)):
             pid = label.item()
-            if pid >= num_class:  # append data except outliers
+            if pid >= num_class: # append data except outliers
                 num_outliers += 1
             else:
+                if pid == x : equalchecker += 1
                 ulb_new_dataset.append((fname, pid, cid))
                 idxs.append(i)
                 pids.append(pid)
+        print(f"equal checker for unlabled: {equalchecker}")
+        equalchecker = 0
         
-        for j, ((lb_fname, _, lb_cid), lb_label) in enumerate(zip(sorted(lb_data_dset), lb_labels)):
+        for j, ((lb_fname, x, lb_cid), lb_label) in enumerate(zip(sorted(lb_data_dset), lb_labels)):
             lb_pid = lb_label.item()
-            if lb_pid >= num_class:  # append data except outliers
+            if lb_pid >= num_class: # append data except outliers
                 num_outliers += 1
             else:
+                lb_idxs.append(j)
+                lb_pids.append(lb_pid)
+                if lb_pid == x : equalchecker += 1
                 lb_new_dataset.append((lb_fname, lb_pid, lb_cid))
 
         lb_train_loader = get_train_loader(dataset, args.height, args.width, args.batch_size,
@@ -279,34 +279,60 @@ def main_worker(args):
         print('==> Statistics for epoch {}: {} clusters, {} un-clustered instances'.format(epoch, num_class,
                                                                                            num_outliers))
 
-        # reindex
-        idxs, pids = np.asarray(idxs), np.asarray(pids)
-        #ulb_features_g = ulb_features_g[idxs, :]
-        #ulb_features_p = ulb_features_p[idxs, :, :]
-        score = score[idxs, :]
+# reindex
+        if args.labled_in_centroid:
+            idxs, pids = np.asarray(idxs), np.asarray(pids)
+            lb_idxs, lb_pids = np.asarray(lb_idxs), np.asarray(lb_pids)
+            print(f"lb idxs: {lb_idxs.shape}, {lb_idxs[0:10]}")
+            print(f"lb pids: {lb_pids.shape}, {lb_pids[0:10]}")
+            # compute cluster centroids
+            centroids_g, centroids_p = [], []
+            for lb_pid in sorted(np.unique(lb_pids)): # loop all pids
+                ulb_idxs_p = np.where(pids == lb_pid)[0]
+                lb_idxs_p = np.where(lb_pids == lb_pid)[0]
+                centroids_g.append(torch.cat((ulb_features_g[ulb_idxs_p], lb_features_g[lb_idxs_p])).mean(0))
+                centroids_p.append(torch.cat((ulb_features_p[ulb_idxs_p], lb_features_p[lb_idxs_p])).mean(0))
 
-        print(f"idxs: {idxs.shape}, {idxs[0:10]}")
-        print(f"pids: {pids.shape}, {pids[0:10]}")
-        print(f"score: {score.shape}, {score[0:10]}")
-        # compute cluster centroids
-        centroids_g, centroids_p = [], []
-        for pid in sorted(np.unique(pids)):  # loop all pids
-            idxs_p = np.where(pids == pid)[0]
-            centroids_g.append(ulb_features_g[idxs_p].mean(0))
-            centroids_p.append(ulb_features_p[idxs_p].mean(0))
+            print(f"centeriod g before normal: {len(centroids_g)}, {centroids_g[0:10]}")
+            centroids_g = F.normalize(torch.stack(centroids_g), p=2, dim=1)
+            print(f"centeroid g after normal: {len(centroids_g)}, {centroids_g[0:10]}")
 
-        print(f"centeriod g before normal: {len(centroids_g)}, {centroids_g[0:10]}")
-        centroids_g = F.normalize(torch.stack(centroids_g), p=2, dim=1)
-        print(f"centeroid g after normal: {len(centroids_g)}, {centroids_g[0:10]}")
+            model.module.classifier.weight.data[:num_class].copy_(centroids_g)
 
-        model.module.classifier.weight.data[:num_class].copy_(centroids_g)
+            for i in range(num_part):
+                centroids_p_i = torch.stack(centroids_p)[:, :, i]
+                centroids_p_i = F.normalize(centroids_p_i, p=2, dim=1)
+                print(f"centeroid p_{i} after normal: {len(centroids_p_i)}, {centroids_p_i[0:10]}")
+                classifier_p_i = getattr(model.module, 'classifier' + str(i))
+                classifier_p_i.weight.data[:num_class].copy_(centroids_p_i)
 
-        for i in range(num_part):
-            centroids_p_i = torch.stack(centroids_p)[:, :, i]
-            centroids_p_i = F.normalize(centroids_p_i, p=2, dim=1)
-            print(f"centeroid p_{i} after normal: {len(centroids_p_i)}, {centroids_p_i[0:10]}")
-            classifier_p_i = getattr(model.module, 'classifier' + str(i))
-            classifier_p_i.weight.data[:num_class].copy_(centroids_p_i)
+        if not args.labled_in_centroid:
+            idxs, pids = np.asarray(idxs), np.asarray(pids)
+            #features_g = features_g[idxs, :]
+            #features_p = features_p[idxs, :, :]
+            score = score[idxs, :]
+            print(f"idxs: {idxs.shape}, {idxs[0:10]}")
+            print(f"pids: {pids.shape}, {pids[0:10]}")
+            print(f"score: {score.shape}, {score[0:10]}")
+            # compute cluster centroids
+            centroids_g, centroids_p = [], []
+            for pid in sorted(np.unique(lb_pids)): # loop all pids
+                idxs_p = np.where(pids == pid)[0]
+                centroids_g.append(ulb_features_g[idxs_p].mean(0))
+                centroids_p.append(ulb_features_p[idxs_p].mean(0))
+
+            print(f"centeriod g before normal: {len(centroids_g)}, {centroids_g[0:10]}")
+            centroids_g = F.normalize(torch.stack(centroids_g), p=2, dim=1)
+            print(f"centeroid g after normal: {len(centroids_g)}, {centroids_g[0:10]}")
+
+            model.module.classifier.weight.data[:num_class].copy_(centroids_g)
+
+            for i in range(num_part):
+                centroids_p_i = torch.stack(centroids_p)[:, :, i]
+                centroids_p_i = F.normalize(centroids_p_i, p=2, dim=1)
+                print(f"centeroid p_{i} after normal: {len(centroids_p_i)}, {centroids_p_i[0:10]}")
+                classifier_p_i = getattr(model.module, 'classifier' + str(i))
+                classifier_p_i.weight.data[:num_class].copy_(centroids_p_i)
 
         # training
         trainer = PPLRTrainer(model, score, num_class=num_class, num_part=num_part, beta=args.beta,

@@ -23,7 +23,7 @@ from .utils import to_torch
 def extract_cnn_feature(model, inputs):
     inputs = to_torch(inputs).cuda()
     outputs = model(inputs)
-    outputs = outputs.data.cpu()
+    outputs = outputs[0].data.cpu()
     return outputs
 
 
@@ -83,9 +83,9 @@ def extract_all_features(model, data_loader, print_freq=200):
             #print(f"pids in extract all features:  {pids}")
             data_time.update(time.time() - end)
             
-            w_imgs = torch.stack([train_transform(img) for img in imgs])
+            #w_imgs = torch.stack([train_transform(img) for img in imgs])
             inputs = to_torch(imgs).cuda()
-            w_inputs = to_torch(w_imgs).cuda()
+            #w_inputs = to_torch(w_imgs).cuda()
 
             #print("1",inputs.shape) #torch.Size([5, 3, 384, 128])
             if isinstance(model, nn.DataParallel):
