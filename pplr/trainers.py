@@ -165,15 +165,9 @@ class PPLRTrainer(object):
                               ulb_loss_pce.item() if isinstance(ulb_loss_pce, torch.Tensor) else ulb_loss_pce))
 
     def _parse_data(self, inputs):
-        imgs, _, pids, _, idxs, is_lb = inputs
-        if is_lb[0].item():
-            ca = torch.ones((is_lb.shape[0], 3), dtype=torch.float32)
-            #w_imgs = torch.stack([self.transform(img) for img in imgs])
-            return imgs.cuda(), pids.cuda(), ca.cuda()
-        else:
-            #s_imgs = torch.stack([self.strong_transform(img) for img in imgs])
-            ca = self.score[idxs]
-            return imgs.cuda(), pids.cuda(), ca.cuda()
+        imgs, _, pids, _, idxs, is_lb = inputs 
+        ca = self.score[idxs]
+        return imgs.cuda(), pids.cuda(), ca.cuda()
         
 
 
